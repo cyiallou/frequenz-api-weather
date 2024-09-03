@@ -30,7 +30,7 @@ dependencies = [
   "googleapis-common-protos >= 1.65.0, < 2",
   "grpcio >= 1.66.1, < 2",
   "frequenz-channels >= 1.0.0, < 2",
-  "frequenz-client-base >= 0.4.0, < 0.5",
+  "frequenz-client-base >= 0.6.0, < 0.7",
   "numpy >= 1.24.2, < 2",
 ]
 dynamic = ["version"]
