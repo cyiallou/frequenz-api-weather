@@ -332,6 +332,27 @@ class TestForecasts:
             len(locations) - 1,
             len(features) - 1,
         )
+        assert not np.isnan(array).any()
+
         assert array[0, 0, 0] == 10
+        assert array[0, 0, 1] == 11
+        assert array[0, 0, 2] == 12
+        assert array[1, 0, 0] == 110
+        assert array[1, 0, 1] == 111
+        assert array[1, 0, 2] == 112
+
+        # Needs fixing: We change the position of the invalid timestamp
+        # and still receive the same result.
+        validity_times = [self.invalid_ts, self.valid_ts1, self.valid_ts2]
+        array = forecasts.to_ndarray_vlf(
+            validity_times=validity_times, locations=locations, features=features
+        )
+        assert array[0, 0, 0] == 10
+        assert array[0, 0, 1] == 11
+        assert array[0, 0, 2] == 12
+        assert array[1, 0, 0] == 110
+        assert array[1, 0, 1] == 111
+        assert array[1, 0, 2] == 112
+
         captured = capsys.readouterr()
         assert "Warning" in captured.out
