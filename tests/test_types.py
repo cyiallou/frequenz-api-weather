@@ -17,7 +17,7 @@ from frequenz.api.common.v1.location_pb2 import Location as LocationProto
 from frequenz.api.weather import weather_pb2
 from frequenz.client.weather._types import ForecastFeature, Forecasts, Location
 from google.protobuf.timestamp_pb2 import Timestamp
-from pytest import CaptureFixture, fixture
+from pytest import fixture
 
 
 class TestForecastFeatureType:
@@ -295,7 +295,6 @@ class TestForecasts:
 
     def test_to_ndarray_vlf_with_missing_parameters(
         self,
-        capsys: CaptureFixture,  # type: ignore
         forecastdata: tuple[
             weather_pb2.ReceiveLiveWeatherForecastResponse, int, int, int
         ],
@@ -328,31 +327,36 @@ class TestForecasts:
         # checks if output is a numpy array and matches expected shape
         assert isinstance(array, np.ndarray)
         assert array.shape == (
-            len(validity_times) - 1,
-            len(locations) - 1,
-            len(features) - 1,
+            len(validity_times),
+            len(locations),
+            len(features),
         )
-        assert not np.isnan(array).any()
+        assert np.isnan(array[:, 0, :]).all()
+        assert np.isnan(array[2, :, :]).all()
+        assert np.isnan(array[:, :, 3]).all()
+        assert not np.isnan(array[0:2, 1, 0:3]).any()
 
-        assert array[0, 0, 0] == 10
-        assert array[0, 0, 1] == 11
-        assert array[0, 0, 2] == 12
-        assert array[1, 0, 0] == 110
-        assert array[1, 0, 1] == 111
-        assert array[1, 0, 2] == 112
+        assert array[0, 1, 0] == 10
+        assert array[0, 1, 1] == 11
+        assert array[0, 1, 2] == 12
+        assert array[1, 1, 0] == 110
+        assert array[1, 1, 1] == 111
+        assert array[1, 1, 2] == 112
 
-        # Needs fixing: We change the position of the invalid timestamp
-        # and still receive the same result.
+        # Change the position of the invalid timestamp
+        # yields different result
         validity_times = [self.invalid_ts, self.valid_ts1, self.valid_ts2]
         array = forecasts.to_ndarray_vlf(
             validity_times=validity_times, locations=locations, features=features
         )
-        assert array[0, 0, 0] == 10
-        assert array[0, 0, 1] == 11
-        assert array[0, 0, 2] == 12
-        assert array[1, 0, 0] == 110
-        assert array[1, 0, 1] == 111
-        assert array[1, 0, 2] == 112
+        assert np.isnan(array[:, 0, :]).all()
+        assert np.isnan(array[0, :, :]).all()
+        assert np.isnan(array[:, :, 3]).all()
+        assert not np.isnan(array[1:3, 1, 0:3]).any()
 
-        captured = capsys.readouterr()
-        assert "Warning" in captured.out
+        assert array[1, 1, 0] == 10
+        assert array[1, 1, 1] == 11
+        assert array[1, 1, 2] == 12
+        assert array[2, 1, 0] == 110
+        assert array[2, 1, 1] == 111
+        assert array[2, 1, 2] == 112
