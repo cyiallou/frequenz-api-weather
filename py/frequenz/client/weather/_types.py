@@ -276,23 +276,19 @@ class Forecasts:
             # Check if the array shape matches the number of filtered times, locations
             # and features
             if validity_times is not None and array.shape[0] != len(validity_times):
-                print(
-                    (
-                        f"Warning:  The count of validity times in the "
-                        f"array({array.shape[0]}) does not match the expected time "
-                        f"filter count ({validity_times_indexes}."
-                    )
+                raise ValueError(
+                    f"The count of validity times in the array({array.shape[0]}) does "
+                    f"not match the requested validity times count ({validity_times}."
                 )
-            if locations is not None and array.shape[1] != len(location_indexes):
-                print(
-                    f"Warning:  The count of location in the "
-                    f"array ({array.shape[1]}) does not match the expected location "
-                    f"filter count ({location_indexes})."
+            if locations is not None and array.shape[1] != len(locations):
+                raise ValueError(
+                    f"The count of location in the array ({array.shape[1]}) does not "
+                    f"match the requested location count ({locations})."
                 )
-            if features is not None and array.shape[2] != len(feature_indexes):
-                print(
-                    f"Warning: The count of features ({array.shape[2]}) does not "
-                    f"match the feature filter count ({feature_indexes})."
+            if features is not None and array.shape[2] != len(features):
+                raise ValueError(
+                    f"The count of features in the array ({array.shape[2]}) does not "
+                    f"match the requested feature count ({features})."
                 )
 
         # catch all exceptions
