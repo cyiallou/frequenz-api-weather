@@ -181,7 +181,7 @@ class TestForecasts:
 
     valid_ts1 = datetime.fromisoformat("2024-01-01T01:00:00")
     valid_ts2 = datetime.fromisoformat("2024-01-01T02:00:00")
-    valid_ts3 = datetime.fromisoformat("2024-01-01T02:00:00")
+    valid_ts3 = datetime.fromisoformat("2024-01-01T03:00:00")
     invalid_ts = datetime.fromisoformat("2024-01-02T03:00:00")
 
     def test_from_pb(
