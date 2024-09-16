@@ -99,71 +99,77 @@ def forecastdata() -> (  # pylint: disable=too-many-locals
     Returns: tuple of example ReceiveLiveWeatherForecastResponse proto object,
     number of times, number of locations, number of features
     """
-    # Create a list of FeatureForecast objects (replace with actual FeatureForecast objects)
-    feature_forecasts_list = []
-    some_feature_values = [
-        weather_pb2.ForecastFeature.FORECAST_FEATURE_U_WIND_COMPONENT_100_METRE,
-        weather_pb2.ForecastFeature.FORECAST_FEATURE_V_WIND_COMPONENT_100_METRE,
-        weather_pb2.ForecastFeature.FORECAST_FEATURE_SURFACE_SOLAR_RADIATION_DOWNWARDS,
-    ]
-    some_float_values = [100, 200, 300]
-
-    for feature, value in zip(some_feature_values, some_float_values):
-        forecast = weather_pb2.LocationForecast.Forecasts.FeatureForecast(
-            feature=feature, value=value
-        )
-        feature_forecasts_list.append(forecast)
-
-    many_forecasts = []
-
-    # adding different valid_ts into valid_ts_list
-
-    valid_ts1 = Timestamp()
-    valid_ts1.FromJsonString("2024-01-01T01:00:00Z")
-
-    valid_ts2 = Timestamp()
-    valid_ts2.FromJsonString("2024-01-01T02:00:00Z")
-
-    valid_ts3 = Timestamp()
-    valid_ts3.FromJsonString("2024-01-01T03:00:00Z")
-
-    valid_ts_list = [valid_ts1, valid_ts2, valid_ts3]
-
-    # adding same forecast for different valid_ts into many_forecasts
-
-    for valid_ts in valid_ts_list:
-        full_features_forecasts = weather_pb2.LocationForecast.Forecasts(
-            valid_at_ts=valid_ts, features=feature_forecasts_list
-        )
-        many_forecasts.append(full_features_forecasts)
-
-    some_locations_forecasts = []
-
-    some_creation_ts = Timestamp()
-    some_creation_ts.FromJsonString("2024-01-01T00:00:00Z")
-
-    # adding different locations into locations_list
+    # Create example data
     locations = [
         LocationProto(latitude=42.0, longitude=18.0, country_code="US"),
         LocationProto(latitude=43.0, longitude=19.0, country_code="CA"),
     ]
+    valid_times = [
+        datetime.fromisoformat("2024-01-01T01:00:00"),
+        datetime.fromisoformat("2024-01-01T02:00:00"),
+        datetime.fromisoformat("2024-01-01T03:00:00"),
+    ]
+    feature_list = [
+        weather_pb2.ForecastFeature.FORECAST_FEATURE_U_WIND_COMPONENT_100_METRE,
+        weather_pb2.ForecastFeature.FORECAST_FEATURE_V_WIND_COMPONENT_100_METRE,
+        weather_pb2.ForecastFeature.FORECAST_FEATURE_SURFACE_SOLAR_RADIATION_DOWNWARDS,
+    ]
 
-    for location in locations:
+    # Convert to Timestamp objects
+    valid_tstamps = []
+    for time in valid_times:
+        ts = Timestamp()
+        ts.FromDatetime(time)
+        valid_tstamps.append(ts)
+
+    num_locations = len(locations)
+    num_times = len(valid_tstamps)
+    num_features = len(feature_list)
+
+    # Create the creation timestamp
+    creation_ts = Timestamp()
+    creation_ts.FromDatetime(valid_times[0])
+
+    # Initialize list to hold location forecasts
+    location_forecasts = []
+
+    # Loop over locations
+    for loc_idx, location in enumerate(locations):
+        forecasts = []
+
+        # Loop over valid times
+        for time_idx, valid_ts in enumerate(valid_tstamps):
+            feature_forecasts = []
+
+            # Different feature values only on features dimension
+            feature_values = [100, 200, 300]
+
+            # Loop over features and their corresponding values
+            for feature, value in zip(feature_list, feature_values):
+                # Create the FeatureForecast object
+                feature_forecast = (
+                    weather_pb2.LocationForecast.Forecasts.FeatureForecast(
+                        feature=feature, value=value
+                    )
+                )
+                feature_forecasts.append(feature_forecast)
+
+            # Create the Forecasts object for the current time
+            forecast = weather_pb2.LocationForecast.Forecasts(
+                valid_at_ts=valid_ts, features=feature_forecasts
+            )
+            forecasts.append(forecast)
+
+        # Create the LocationForecast object for the current location
         location_forecast = weather_pb2.LocationForecast(
-            forecasts=many_forecasts,
-            location=location,
-            creation_ts=some_creation_ts,
+            forecasts=forecasts, location=location, creation_ts=creation_ts
         )
-        some_locations_forecasts.append(location_forecast)
+        location_forecasts.append(location_forecast)
 
-    # creating a ReceiveLiveWeatherForecastResponse proto object
+    # Create the ReceiveLiveWeatherForecastResponse proto object
     forecasts_proto = weather_pb2.ReceiveLiveWeatherForecastResponse(
-        location_forecasts=some_locations_forecasts
+        location_forecasts=location_forecasts
     )
-
-    num_times = 3
-    num_locations = 2
-    num_features = 3
 
     return forecasts_proto, num_times, num_locations, num_features
 
