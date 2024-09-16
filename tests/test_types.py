@@ -141,11 +141,11 @@ def forecastdata() -> (  # pylint: disable=too-many-locals
         for time_idx, valid_ts in enumerate(valid_tstamps):
             feature_forecasts = []
 
-            # Different feature values only on features dimension
-            feature_values = [100, 200, 300]
+            # Loop over features
+            for feature_idx, feature in enumerate(feature_list):
+                # Create distinct values for each combination (acc to indexing)
+                value = 1 * feature_idx + 100 * time_idx + 10 * loc_idx
 
-            # Loop over features and their corresponding values
-            for feature, value in zip(feature_list, feature_values):
                 # Create the FeatureForecast object
                 feature_forecast = (
                     weather_pb2.LocationForecast.Forecasts.FeatureForecast(
@@ -225,7 +225,7 @@ class TestForecasts:
             num_locations,
             num_features,
         )
-        assert array[0, 0, 0] == 100
+        assert array[0, 0, 0] == 0
         assert array[1, 0, 0] == 100
 
     def test_to_ndarray_vlf_with_some_parameters(
@@ -256,9 +256,9 @@ class TestForecasts:
         assert isinstance(array, np.ndarray)
         assert array.shape == (len(validity_times), len(locations), len(features))
         # Note order of features in query is different from order in proto
-        assert array[0, 0, 0] == 200
-        assert array[0, 0, 1] == 100
-        assert array[1, 0, 0] == 200
+        assert array[0, 0, 0] == 1
+        assert array[0, 0, 1] == 0
+        assert array[1, 0, 0] == 101
         assert array[1, 0, 1] == 100
 
     def test_to_ndarray_vlf_with_all_parameters(
@@ -332,6 +332,6 @@ class TestForecasts:
             len(locations) - 1,
             len(features) - 1,
         )
-        assert array[0, 0, 0] == 100
+        assert array[0, 0, 0] == 10
         captured = capsys.readouterr()
         assert "Warning" in captured.out
