@@ -220,6 +220,7 @@ class TestForecasts:
             num_features,
         )
         assert array[0, 0, 0] == 100
+        assert array[1, 0, 0] == 100
 
     def test_to_ndarray_vlf_with_some_parameters(
         self,
@@ -235,6 +236,7 @@ class TestForecasts:
         validity_times = [self.valid_ts1, self.valid_ts2]
 
         locations = [Location(latitude=42.0, longitude=18.0, country_code="US")]
+        # Note order of features in query is different from order in proto
         features = [
             ForecastFeature.V_WIND_COMPONENT_100_METRE,
             ForecastFeature.U_WIND_COMPONENT_100_METRE,
@@ -247,7 +249,11 @@ class TestForecasts:
         # checks if output is a numpy array and matches expected shape
         assert isinstance(array, np.ndarray)
         assert array.shape == (len(validity_times), len(locations), len(features))
+        # Note order of features in query is different from order in proto
         assert array[0, 0, 0] == 200
+        assert array[0, 0, 1] == 100
+        assert array[1, 0, 0] == 200
+        assert array[1, 0, 1] == 100
 
     def test_to_ndarray_vlf_with_all_parameters(
         self,
@@ -289,13 +295,15 @@ class TestForecasts:
         ],
     ) -> None:
         """Test if the to_ndarray method works correctly when filter parameters are missing."""
-        # create an example Forecasts object with 3 times, 2 locations and 3 features
+        # create an example Forecasts object with 3 times, 2 locations and 4 features
+        # where each dimension contains one key without data
         forecasts_proto, num_times, num_locations, num_features = forecastdata
         forecasts = Forecasts.from_pb(forecasts_proto)
 
         validity_times = [self.valid_ts1, self.valid_ts2, self.invalid_ts]
 
         locations = [
+            # this location has no data in proto
             Location(latitude=50.0, longitude=18.0, country_code="US"),
             Location(latitude=43.0, longitude=19.0, country_code="CA"),
         ]
