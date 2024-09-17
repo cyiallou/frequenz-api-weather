@@ -192,36 +192,51 @@ class Forecasts:
             # get the location indexes of the proto for the filtered locations
             if locations:
                 for location in locations:
+                    found = False
                     for l_index, location_forecast in enumerate(
                         self._forecasts_pb.location_forecasts
                     ):
                         if location == Location.from_pb(location_forecast.location):
                             location_indexes.append(l_index)
+                            found = True
                             break
+                    if not found:
+                        # remember position of missing location
+                        location_indexes.append(-1)
             else:
                 location_indexes = list(range(num_locations))
 
             # get the val indexes of the proto for the filtered validity times
             if validity_times:
                 for req_validitiy_time in validity_times:
+                    found = False
                     for t_index, val_time in enumerate(
                         self._forecasts_pb.location_forecasts[0].forecasts
                     ):
                         if req_validitiy_time == val_time.valid_at_ts.ToDatetime():
                             validity_times_indexes.append(t_index)
+                            found = True
                             break
+                    if not found:
+                        # remember position of missing validity time
+                        validity_times_indexes.append(-1)
             else:
                 validity_times_indexes = list(range(num_times))
 
             # get the feature indexes of the proto for the filtered features
             if features:
                 for req_feature in features:
+                    found = False
                     for f_index, feature in enumerate(
                         self._forecasts_pb.location_forecasts[0].forecasts[0].features
                     ):
                         if req_feature == ForecastFeature.from_pb(feature.feature):
                             feature_indexes.append(f_index)
+                            found = True
                             break
+                    if not found:
+                        # remember position of missing feature
+                        feature_indexes.append(-1)
             else:
                 feature_indexes = list(range(num_features))
 
@@ -243,12 +258,15 @@ class Forecasts:
                     array_f_index = 0
 
                     for f_index in feature_indexes:
-                        array[array_t_index, array_l_index, array_f_index] = (
-                            self._forecasts_pb.location_forecasts[l_index]
-                            .forecasts[t_index]
-                            .features[f_index]
-                            .value
-                        )
+                        # This fails if there was data missing for at least one of the
+                        # keys and we don't update the array but leave it as NaN
+                        if l_index >= 0 and t_index >= 0 and f_index >= 0:
+                            array[array_t_index, array_l_index, array_f_index] = (
+                                self._forecasts_pb.location_forecasts[l_index]
+                                .forecasts[t_index]
+                                .features[f_index]
+                                .value
+                            )
                         array_f_index += 1
 
                     array_t_index += 1
@@ -258,23 +276,19 @@ class Forecasts:
             # Check if the array shape matches the number of filtered times, locations
             # and features
             if validity_times is not None and array.shape[0] != len(validity_times):
-                print(
-                    (
-                        f"Warning:  The count of validity times in the "
-                        f"array({array.shape[0]}) does not match the expected time "
-                        f"filter count ({validity_times_indexes}."
-                    )
+                raise ValueError(
+                    f"The count of validity times in the array({array.shape[0]}) does "
+                    f"not match the requested validity times count ({validity_times}."
                 )
-            if locations is not None and array.shape[1] != len(location_indexes):
-                print(
-                    f"Warning:  The count of location in the "
-                    f"array ({array.shape[1]}) does not match the expected location "
-                    f"filter count ({location_indexes})."
+            if locations is not None and array.shape[1] != len(locations):
+                raise ValueError(
+                    f"The count of location in the array ({array.shape[1]}) does not "
+                    f"match the requested location count ({locations})."
                 )
-            if features is not None and array.shape[2] != len(feature_indexes):
-                print(
-                    f"Warning: The count of features ({array.shape[2]}) does not "
-                    f"match the feature filter count ({feature_indexes})."
+            if features is not None and array.shape[2] != len(features):
+                raise ValueError(
+                    f"The count of features in the array ({array.shape[2]}) does not "
+                    f"match the requested feature count ({features})."
                 )
 
         # catch all exceptions

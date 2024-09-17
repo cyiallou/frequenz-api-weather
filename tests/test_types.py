@@ -17,7 +17,7 @@ from frequenz.api.common.v1.location_pb2 import Location as LocationProto
 from frequenz.api.weather import weather_pb2
 from frequenz.client.weather._types import ForecastFeature, Forecasts, Location
 from google.protobuf.timestamp_pb2 import Timestamp
-from pytest import CaptureFixture, fixture
+from pytest import fixture
 
 
 class TestForecastFeatureType:
@@ -99,71 +99,77 @@ def forecastdata() -> (  # pylint: disable=too-many-locals
     Returns: tuple of example ReceiveLiveWeatherForecastResponse proto object,
     number of times, number of locations, number of features
     """
-    # Create a list of FeatureForecast objects (replace with actual FeatureForecast objects)
-    feature_forecasts_list = []
-    some_feature_values = [
-        weather_pb2.ForecastFeature.FORECAST_FEATURE_U_WIND_COMPONENT_100_METRE,
-        weather_pb2.ForecastFeature.FORECAST_FEATURE_V_WIND_COMPONENT_100_METRE,
-        weather_pb2.ForecastFeature.FORECAST_FEATURE_SURFACE_SOLAR_RADIATION_DOWNWARDS,
-    ]
-    some_float_values = [100, 200, 300]
-
-    for feature, value in zip(some_feature_values, some_float_values):
-        forecast = weather_pb2.LocationForecast.Forecasts.FeatureForecast(
-            feature=feature, value=value
-        )
-        feature_forecasts_list.append(forecast)
-
-    many_forecasts = []
-
-    # adding different valid_ts into valid_ts_list
-
-    valid_ts1 = Timestamp()
-    valid_ts1.FromJsonString("2024-01-01T01:00:00Z")
-
-    valid_ts2 = Timestamp()
-    valid_ts2.FromJsonString("2024-01-01T02:00:00Z")
-
-    valid_ts3 = Timestamp()
-    valid_ts3.FromJsonString("2024-01-01T03:00:00Z")
-
-    valid_ts_list = [valid_ts1, valid_ts2, valid_ts3]
-
-    # adding same forecast for different valid_ts into many_forecasts
-
-    for valid_ts in valid_ts_list:
-        full_features_forecasts = weather_pb2.LocationForecast.Forecasts(
-            valid_at_ts=valid_ts, features=feature_forecasts_list
-        )
-        many_forecasts.append(full_features_forecasts)
-
-    some_locations_forecasts = []
-
-    some_creation_ts = Timestamp()
-    some_creation_ts.FromJsonString("2024-01-01T00:00:00Z")
-
-    # adding different locations into locations_list
+    # Create example data
     locations = [
         LocationProto(latitude=42.0, longitude=18.0, country_code="US"),
         LocationProto(latitude=43.0, longitude=19.0, country_code="CA"),
     ]
+    valid_times = [
+        datetime.fromisoformat("2024-01-01T01:00:00"),
+        datetime.fromisoformat("2024-01-01T02:00:00"),
+        datetime.fromisoformat("2024-01-01T03:00:00"),
+    ]
+    feature_list = [
+        weather_pb2.ForecastFeature.FORECAST_FEATURE_U_WIND_COMPONENT_100_METRE,
+        weather_pb2.ForecastFeature.FORECAST_FEATURE_V_WIND_COMPONENT_100_METRE,
+        weather_pb2.ForecastFeature.FORECAST_FEATURE_SURFACE_SOLAR_RADIATION_DOWNWARDS,
+    ]
 
-    for location in locations:
+    # Convert to Timestamp objects
+    valid_tstamps = []
+    for time in valid_times:
+        ts = Timestamp()
+        ts.FromDatetime(time)
+        valid_tstamps.append(ts)
+
+    num_locations = len(locations)
+    num_times = len(valid_tstamps)
+    num_features = len(feature_list)
+
+    # Create the creation timestamp
+    creation_ts = Timestamp()
+    creation_ts.FromDatetime(valid_times[0])
+
+    # Initialize list to hold location forecasts
+    location_forecasts = []
+
+    # Loop over locations
+    for loc_idx, location in enumerate(locations):
+        forecasts = []
+
+        # Loop over valid times
+        for time_idx, valid_ts in enumerate(valid_tstamps):
+            feature_forecasts = []
+
+            # Loop over features
+            for feature_idx, feature in enumerate(feature_list):
+                # Create distinct values for each combination (acc to indexing)
+                value = 1 * feature_idx + 100 * time_idx + 10 * loc_idx
+
+                # Create the FeatureForecast object
+                feature_forecast = (
+                    weather_pb2.LocationForecast.Forecasts.FeatureForecast(
+                        feature=feature, value=value
+                    )
+                )
+                feature_forecasts.append(feature_forecast)
+
+            # Create the Forecasts object for the current time
+            forecast = weather_pb2.LocationForecast.Forecasts(
+                valid_at_ts=valid_ts, features=feature_forecasts
+            )
+            forecasts.append(forecast)
+
+        # Create the LocationForecast object for the current location
         location_forecast = weather_pb2.LocationForecast(
-            forecasts=many_forecasts,
-            location=location,
-            creation_ts=some_creation_ts,
+            forecasts=forecasts, location=location, creation_ts=creation_ts
         )
-        some_locations_forecasts.append(location_forecast)
+        location_forecasts.append(location_forecast)
 
-    # creating a ReceiveLiveWeatherForecastResponse proto object
+    # Create the ReceiveLiveWeatherForecastResponse proto object
     forecasts_proto = weather_pb2.ReceiveLiveWeatherForecastResponse(
-        location_forecasts=some_locations_forecasts
+        location_forecasts=location_forecasts
     )
-
-    num_times = 3
-    num_locations = 2
-    num_features = 3
 
     return forecasts_proto, num_times, num_locations, num_features
 
@@ -181,7 +187,7 @@ class TestForecasts:
 
     valid_ts1 = datetime.fromisoformat("2024-01-01T01:00:00")
     valid_ts2 = datetime.fromisoformat("2024-01-01T02:00:00")
-    valid_ts3 = datetime.fromisoformat("2024-01-01T02:00:00")
+    valid_ts3 = datetime.fromisoformat("2024-01-01T03:00:00")
     invalid_ts = datetime.fromisoformat("2024-01-02T03:00:00")
 
     def test_from_pb(
@@ -219,7 +225,8 @@ class TestForecasts:
             num_locations,
             num_features,
         )
-        assert array[0, 0, 0] == 100
+        assert array[0, 0, 0] == 0
+        assert array[1, 0, 0] == 100
 
     def test_to_ndarray_vlf_with_some_parameters(
         self,
@@ -235,6 +242,7 @@ class TestForecasts:
         validity_times = [self.valid_ts1, self.valid_ts2]
 
         locations = [Location(latitude=42.0, longitude=18.0, country_code="US")]
+        # Note order of features in query is different from order in proto
         features = [
             ForecastFeature.V_WIND_COMPONENT_100_METRE,
             ForecastFeature.U_WIND_COMPONENT_100_METRE,
@@ -247,7 +255,11 @@ class TestForecasts:
         # checks if output is a numpy array and matches expected shape
         assert isinstance(array, np.ndarray)
         assert array.shape == (len(validity_times), len(locations), len(features))
-        assert array[0, 0, 0] == 200
+        # Note order of features in query is different from order in proto
+        assert array[0, 0, 0] == 1
+        assert array[0, 0, 1] == 0
+        assert array[1, 0, 0] == 101
+        assert array[1, 0, 1] == 100
 
     def test_to_ndarray_vlf_with_all_parameters(
         self,
@@ -283,19 +295,20 @@ class TestForecasts:
 
     def test_to_ndarray_vlf_with_missing_parameters(
         self,
-        capsys: CaptureFixture,  # type: ignore
         forecastdata: tuple[
             weather_pb2.ReceiveLiveWeatherForecastResponse, int, int, int
         ],
     ) -> None:
         """Test if the to_ndarray method works correctly when filter parameters are missing."""
-        # create an example Forecasts object with 3 times, 2 locations and 3 features
+        # create an example Forecasts object with 3 times, 2 locations and 4 features
+        # where each dimension contains one key without data
         forecasts_proto, num_times, num_locations, num_features = forecastdata
         forecasts = Forecasts.from_pb(forecasts_proto)
 
         validity_times = [self.valid_ts1, self.valid_ts2, self.invalid_ts]
 
         locations = [
+            # this location has no data in proto
             Location(latitude=50.0, longitude=18.0, country_code="US"),
             Location(latitude=43.0, longitude=19.0, country_code="CA"),
         ]
@@ -314,10 +327,36 @@ class TestForecasts:
         # checks if output is a numpy array and matches expected shape
         assert isinstance(array, np.ndarray)
         assert array.shape == (
-            len(validity_times) - 1,
-            len(locations) - 1,
-            len(features) - 1,
+            len(validity_times),
+            len(locations),
+            len(features),
         )
-        assert array[0, 0, 0] == 100
-        captured = capsys.readouterr()
-        assert "Warning" in captured.out
+        assert np.isnan(array[:, 0, :]).all()
+        assert np.isnan(array[2, :, :]).all()
+        assert np.isnan(array[:, :, 3]).all()
+        assert not np.isnan(array[0:2, 1, 0:3]).any()
+
+        assert array[0, 1, 0] == 10
+        assert array[0, 1, 1] == 11
+        assert array[0, 1, 2] == 12
+        assert array[1, 1, 0] == 110
+        assert array[1, 1, 1] == 111
+        assert array[1, 1, 2] == 112
+
+        # Change the position of the invalid timestamp
+        # yields different result
+        validity_times = [self.invalid_ts, self.valid_ts1, self.valid_ts2]
+        array = forecasts.to_ndarray_vlf(
+            validity_times=validity_times, locations=locations, features=features
+        )
+        assert np.isnan(array[:, 0, :]).all()
+        assert np.isnan(array[0, :, :]).all()
+        assert np.isnan(array[:, :, 3]).all()
+        assert not np.isnan(array[1:3, 1, 0:3]).any()
+
+        assert array[1, 1, 0] == 10
+        assert array[1, 1, 1] == 11
+        assert array[1, 1, 2] == 12
+        assert array[2, 1, 0] == 110
+        assert array[2, 1, 1] == 111
+        assert array[2, 1, 2] == 112
